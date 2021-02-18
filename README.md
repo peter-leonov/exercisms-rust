@@ -1,3 +1,3 @@
 ```sh
-cargo watch -c -x test
+cargo watch -c -q -d 0.25 -x test
 ```
