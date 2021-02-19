@@ -1,12 +1,22 @@
+use std::iter::once;
+
 pub fn build_proverb(list: &[&str]) -> String {
-    let mut proverb = list
-        .windows(2)
-        .map(|w| format!("For want of a {} the {} was lost.", w[0], w[1]))
-        .collect::<Vec<String>>();
-
     if let Some(first) = list.first() {
-        proverb.push(format!("And all for the want of a {}.", first));
+        list.windows(2)
+            .map(|w| format!("For want of a {} the {} was lost.\n", w[0], w[1]))
+            .chain(once(format!("And all for the want of a {}.", first)))
+            .collect()
+    } else {
+        "".to_owned()
     }
-
-    proverb.join("\n")
 }
+
+// pub fn build_proverb(list: &[&str]) -> String {
+//     let first = match list.first() {
+//         Some(first) => format!("And all for the want of a {}.", first),
+//         None => return "".to_owned(),
+//     };
+//     list.windows(2).rfold(first, |acc, w| {
+//         format!("For want of a {} the {} was lost.\n{}", w[0], w[1], acc)
+//     })
+// }
