@@ -17,5 +17,6 @@ fn test_sixth_prime() {
 
 #[test]
 fn test_big_prime() {
+    // is_prime: steps = 477177
     assert_eq!(np::nth(10_000), 104_743);
 }
