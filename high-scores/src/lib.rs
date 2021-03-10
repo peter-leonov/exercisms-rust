@@ -1,10 +1,8 @@
 #[derive(Debug)]
 pub struct HighScores(Box<[u32]>);
 
-use std::collections::BinaryHeap;
-
 impl HighScores {
-    pub fn new<'a>(scores: &'a [u32]) -> Self {
+    pub fn new(scores: &[u32]) -> Self {
         Self(scores.into())
     }
 
@@ -20,7 +18,7 @@ impl HighScores {
     }
     pub fn personal_top_three(&self) -> Vec<u32> {
         // using a small fixed size vector
-        // instead of a heap or a tree
+        // instead of a heap or a tree for simplicity
         self.0.iter().fold(Vec::with_capacity(4), |mut acc, x| {
             acc.push(*x);
             // reverse sort
