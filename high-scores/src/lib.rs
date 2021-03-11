@@ -1,9 +1,9 @@
 #[derive(Debug)]
-pub struct HighScores(Box<[u32]>);
+pub struct HighScores<'a>(&'a [u32]);
 
-impl HighScores {
-    pub fn new(scores: &[u32]) -> Self {
-        Self(scores.into())
+impl<'a> HighScores<'a> {
+    pub fn new(scores: &'a [u32]) -> Self {
+        Self(scores)
     }
 
     pub fn scores(&self) -> &[u32] {
@@ -11,10 +11,10 @@ impl HighScores {
     }
 
     pub fn latest(&self) -> Option<u32> {
-        self.0.last().map(|&x| x)
+        self.0.last().copied()
     }
     pub fn personal_best(&self) -> Option<u32> {
-        self.0.iter().copied().max()
+        self.0.iter().max().copied()
     }
     pub fn personal_top_three(&self) -> Vec<u32> {
         // using a small fixed size vector
