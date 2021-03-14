@@ -11,6 +11,17 @@ pub struct SimpleLinkedList<T> {
     head: Option<Box<SimpleLinkedListNode<T>>>,
 }
 
+fn append<T>(node: &mut Box<SimpleLinkedListNode<T>>, new_node: Box<SimpleLinkedListNode<T>>) {
+    match node.next {
+        None => {
+            node.next = Some(new_node);
+        }
+        Some(ref mut node) => {
+            append(node, new_node);
+        }
+    }
+}
+
 impl<T> SimpleLinkedList<T> {
     pub fn new() -> Self {
         Self { head: None }
@@ -46,42 +57,21 @@ impl<T> SimpleLinkedList<T> {
         len
     }
 
-    pub fn push(&mut self, _element: T) {
-        let elem = Box::new(SimpleLinkedListNode {
-            value: _element,
-            next: None,
-        });
-
-        match &mut self.head {
+    pub fn push(&mut self, value: T) {
+        let new_node = Box::new(SimpleLinkedListNode { value, next: None });
+        match self.head {
             None => {
-                self.head = Some(elem);
+                self.head = Some(new_node);
             }
-            Some(next) => {
-                if let Some(next) = &mut next.next {
-                    if let Some(next) = &mut next.next {
-                        if let Some(next) = &mut next.next {
-                            if let Some(next) = &mut next.next {
-                                if let Some(_) = &mut next.next {
-                                    unimplemented!();
-                                } else {
-                                    next.next = Some(elem);
-                                }
-                            } else {
-                                next.next = Some(elem);
-                            }
-                        } else {
-                            next.next = Some(elem);
-                        }
-                    } else {
-                        next.next = Some(elem);
-                    }
-                } else {
-                    next.next = Some(elem);
-                }
-                // while let Some(next) = &mut last.next {
-                //     last = next;
-                // }
-                // last.next = Some(elem);
+            Some(ref mut node) => {
+                append(node, new_node);
+                // let mut node = node;
+                // {
+                //     while let Some(next) = &mut node.next {
+                //         node = next;
+                //     }
+                // };
+                // node.next = Some(elem);
             }
         }
 
