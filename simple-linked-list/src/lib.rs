@@ -62,25 +62,40 @@ impl<T> SimpleLinkedList<T> {
         match self.head {
             None => {
                 self.head = Some(new_node);
+                return;
             }
             Some(ref mut node) => {
-                append(node, new_node);
-                // let mut node = node;
-                // {
-                //     while let Some(next) = &mut node.next {
-                //         node = next;
+                // append(node, new_node);
+                let mut node = node;
+                loop {
+                    match node.next {
+                        None => {
+                            node.next = Some(new_node);
+                            break;
+                        }
+                        Some(ref mut next) => {
+                            node = next;
+                        }
+                    }
+                }
+
+                // loop {
+                //     match {node} {
+                //         &mut Cons(_, ref mut next) => node = next,
+                //         other => return other,
                 //     }
-                // };
-                // node.next = Some(elem);
+                // }
+
+                // loop {
+                // if let Some(next) = &mut {node}.next {
+                //     node = next;
+                // } else {
+                //     node.next = Some(new_node);
+                //     break;
+                // }
+                // }
             }
         }
-
-        // if let Some(&mut last) = &self.head {
-        //     while let Some(next) = &last.next {
-        //         last = next;
-        //     }
-        //     // last.next = Some(elem);
-        // }
     }
 
     pub fn pop(&mut self) -> Option<T> {
