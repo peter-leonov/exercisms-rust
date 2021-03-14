@@ -7,7 +7,6 @@ fn test_new_list_is_empty() {
 }
 
 #[test]
-#[ignore]
 fn test_push_increments_length() {
     let mut list: SimpleLinkedList<u32> = SimpleLinkedList::new();
     list.push(1);

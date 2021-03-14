@@ -1,14 +1,19 @@
 use std::iter::FromIterator;
 
+#[derive(PartialEq, Eq)]
+pub struct SimpleLinkedListNode<T> {
+    value: T,
+    next: Option<Box<Self>>,
+}
+
+#[derive(PartialEq, Eq)]
 pub struct SimpleLinkedList<T> {
-    // Delete this field
-    // dummy is needed to avoid unused parameter error during compilation
-    dummy: ::std::marker::PhantomData<T>,
+    head: Option<Box<SimpleLinkedListNode<T>>>,
 }
 
 impl<T> SimpleLinkedList<T> {
     pub fn new() -> Self {
-        unimplemented!()
+        Self { head: None }
     }
 
     // You may be wondering why it's necessary to have is_empty()
@@ -17,15 +22,75 @@ impl<T> SimpleLinkedList<T> {
     // whereas is_empty() is almost always cheap.
     // (Also ask yourself whether len() is expensive for SimpleLinkedList)
     pub fn is_empty(&self) -> bool {
-        unimplemented!()
+        match self.head {
+            None => true,
+            _ => false,
+        }
     }
 
     pub fn len(&self) -> usize {
-        unimplemented!()
+        let mut len = 0;
+
+        match &self.head {
+            None => (),
+            Some(node) => {
+                let mut node = node;
+                len += 1;
+                while let Some(next) = &node.next {
+                    len += 1;
+                    node = next;
+                }
+            }
+        }
+
+        len
     }
 
     pub fn push(&mut self, _element: T) {
-        unimplemented!()
+        let elem = Box::new(SimpleLinkedListNode {
+            value: _element,
+            next: None,
+        });
+
+        match &mut self.head {
+            None => {
+                self.head = Some(elem);
+            }
+            Some(next) => {
+                if let Some(next) = &mut next.next {
+                    if let Some(next) = &mut next.next {
+                        if let Some(next) = &mut next.next {
+                            if let Some(next) = &mut next.next {
+                                if let Some(_) = &mut next.next {
+                                    unimplemented!();
+                                } else {
+                                    next.next = Some(elem);
+                                }
+                            } else {
+                                next.next = Some(elem);
+                            }
+                        } else {
+                            next.next = Some(elem);
+                        }
+                    } else {
+                        next.next = Some(elem);
+                    }
+                } else {
+                    next.next = Some(elem);
+                }
+                // while let Some(next) = &mut last.next {
+                //     last = next;
+                // }
+                // last.next = Some(elem);
+            }
+        }
+
+        // if let Some(&mut last) = &self.head {
+        //     while let Some(next) = &last.next {
+        //         last = next;
+        //     }
+        //     // last.next = Some(elem);
+        // }
     }
 
     pub fn pop(&mut self) -> Option<T> {
