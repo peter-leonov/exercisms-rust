@@ -18,6 +18,10 @@ impl<T> SimpleLinkedList<T> {
         }
     }
 
+    fn new_with_head(head: Option<Box<Node<T>>>) -> Self {
+        Self { head }
+    }
+
     // You may be wondering why it's necessary to have is_empty()
     // when it can easily be determined from len().
     // It's good custom to have both because len() can be expensive for some types,
@@ -62,10 +66,7 @@ impl<T> SimpleLinkedList<T> {
     }
 
     pub fn peek(&self) -> Option<&T> {
-        match self.head {
-            None => None,
-            Some(ref node) => return Some(&node.value),
-        }
+        self.head.as_ref().map(|node| &node.value)
     }
 
     pub fn rev(self) -> SimpleLinkedList<T> {
@@ -75,7 +76,11 @@ impl<T> SimpleLinkedList<T> {
 
 impl<T> FromIterator<T> for SimpleLinkedList<T> {
     fn from_iter<I: IntoIterator<Item = T>>(_iter: I) -> Self {
-        unimplemented!()
+        let mut head = None;
+        for value in _iter {
+            head = Some(Box::new(Node { value, next: head }));
+        }
+        Self::new_with_head(head)
     }
 }
 
