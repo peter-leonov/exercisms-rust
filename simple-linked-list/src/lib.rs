@@ -46,31 +46,28 @@ impl<T> SimpleLinkedList<T> {
     }
 
     pub fn push(&mut self, value: T) {
-        let old_head = self.head.take();
-        let new_head_node = Box::new(Node {
+        self.head = Some(Box::new(Node {
             value,
-            next: old_head,
-        });
-        self.head = Some(new_head_node);
+            next: self.head.take(),
+        }));
     }
 
     fn push_node(&mut self, mut node: Box<Node<T>>) {
-        let old_head = self.head.take();
-        node.next = old_head;
+        node.next = self.head.take();
         self.head = Some(node);
     }
 
     pub fn pop(&mut self) -> Option<T> {
-        self.head.take().and_then(|head| {
+        self.head.take().map(|head| {
             self.head = head.next;
-            Some(head.value)
+            head.value
         })
     }
 
     fn pop_node(&mut self) -> Link<T> {
-        self.head.take().and_then(|mut head| {
+        self.head.take().map(|mut head| {
             self.head = head.next.take();
-            Some(head)
+            head
         })
     }
 
