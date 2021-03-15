@@ -1,30 +1,21 @@
 use std::iter::FromIterator;
 
 #[derive(PartialEq, Eq)]
-pub struct SimpleLinkedListNode<T> {
+struct Node<T> {
     value: T,
     next: Option<Box<Self>>,
 }
 
 #[derive(PartialEq, Eq)]
 pub struct SimpleLinkedList<T> {
-    head: Option<Box<SimpleLinkedListNode<T>>>,
-}
-
-fn append<T>(node: &mut Box<SimpleLinkedListNode<T>>, new_node: Box<SimpleLinkedListNode<T>>) {
-    match node.next {
-        None => {
-            node.next = Some(new_node);
-        }
-        Some(ref mut node) => {
-            append(node, new_node);
-        }
-    }
+    head: Option<Box<Node<T>>>,
 }
 
 impl<T> SimpleLinkedList<T> {
     pub fn new() -> Self {
-        Self { head: None }
+        Self {
+            head: Default::default(),
+        }
     }
 
     // You may be wondering why it's necessary to have is_empty()
@@ -42,68 +33,39 @@ impl<T> SimpleLinkedList<T> {
     pub fn len(&self) -> usize {
         let mut len = 0;
 
-        match &self.head {
-            None => (),
-            Some(node) => {
-                let mut node = node;
-                len += 1;
-                while let Some(next) = &node.next {
-                    len += 1;
-                    node = next;
-                }
-            }
+        let mut ptr = &self.head;
+        while let Some(node) = ptr {
+            len += 1;
+            ptr = &node.next;
         }
 
         len
     }
 
     pub fn push(&mut self, value: T) {
-        let new_node = Box::new(SimpleLinkedListNode { value, next: None });
-        match self.head {
-            None => {
-                self.head = Some(new_node);
-                return;
-            }
-            Some(ref mut node) => {
-                // append(node, new_node);
-                let mut node = node;
-                loop {
-                    match node.next {
-                        None => {
-                            node.next = Some(new_node);
-                            break;
-                        }
-                        Some(ref mut next) => {
-                            node = next;
-                        }
-                    }
-                }
-
-                // loop {
-                //     match {node} {
-                //         &mut Cons(_, ref mut next) => node = next,
-                //         other => return other,
-                //     }
-                // }
-
-                // loop {
-                // if let Some(next) = &mut {node}.next {
-                //     node = next;
-                // } else {
-                //     node.next = Some(new_node);
-                //     break;
-                // }
-                // }
-            }
-        }
+        let old_head = self.head.take();
+        let new_head_node = Box::new(Node {
+            value,
+            next: old_head,
+        });
+        self.head = Some(new_head_node);
     }
 
     pub fn pop(&mut self) -> Option<T> {
-        unimplemented!()
+        let old_head = self.head.take();
+        if let Some(old_head_node) = old_head {
+            self.head = old_head_node.next;
+            Some(old_head_node.value)
+        } else {
+            None
+        }
     }
 
     pub fn peek(&self) -> Option<&T> {
-        unimplemented!()
+        match self.head {
+            None => None,
+            Some(ref node) => return Some(&node.value),
+        }
     }
 
     pub fn rev(self) -> SimpleLinkedList<T> {
