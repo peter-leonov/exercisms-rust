@@ -34,15 +34,32 @@ impl<T> SimpleLinkedList<T> {
     }
 
     pub fn len(&self) -> usize {
-        let mut len = 0;
+        // I'd expect iter over values to be slower
+        // than the loop below, but it gets compiled to this:
+        // .LBB3_3:
+        // add     rbx, 1
+        // mov     r14, qword ptr [r14]
+        // test    r14, r14
+        // jne     .LBB3_3
+        // => ❤️
+        self.into_iter().count()
 
-        let mut link = &self.head;
-        while let Some(node) = link {
-            len += 1;
-            link = &node.next;
-        }
+        // and the following hand crafted loop gets compiled to:
+        // .LBB3_3:
+        // add     r14, 1
+        // mov     rbx, qword ptr [rbx]
+        // cmp     qword ptr [rbx], 0
+        // jne     .LBB3_3
 
-        len
+        // let mut len = 0;
+
+        // let mut link = &self.head;
+        // while let Some(node) = link {
+        //     len += 1;
+        //     link = &node.next;
+        // }
+
+        // len
     }
 
     pub fn push(&mut self, value: T) {
@@ -84,9 +101,9 @@ impl<T> SimpleLinkedList<T> {
     }
 }
 
-pub struct SimpleLinkedListIntoIter<T>(SimpleLinkedList<T>);
+pub struct SimpleLinkedListIter<T>(SimpleLinkedList<T>);
 
-impl<T> Iterator for SimpleLinkedListIntoIter<T> {
+impl<T> Iterator for SimpleLinkedListIter<T> {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         self.0.pop()
@@ -95,10 +112,38 @@ impl<T> Iterator for SimpleLinkedListIntoIter<T> {
 
 impl<T> IntoIterator for SimpleLinkedList<T> {
     type Item = T;
-    type IntoIter = SimpleLinkedListIntoIter<Self::Item>;
+    type IntoIter = SimpleLinkedListIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
-        SimpleLinkedListIntoIter(self.rev())
+        SimpleLinkedListIter(self.rev())
+    }
+}
+
+pub struct SimpleLinkedListRefIter<'a, T>(&'a Link<T>);
+
+impl<'a, T> Iterator for SimpleLinkedListRefIter<'a, T> {
+    type Item = &'a T;
+    fn next(&mut self) -> Option<Self::Item> {
+        // it's as fast as the if let below 🤯
+        self.0.as_ref().map(|node| {
+            self.0 = &node.next;
+            &node.value
+        })
+        // if let Some(node) = self.0 {
+        //     self.0 = &node.next;
+        //     return Some(&node.value);
+        // } else {
+        //     None
+        // }
+    }
+}
+
+impl<'a, T> IntoIterator for &'a SimpleLinkedList<T> {
+    type Item = &'a T;
+    type IntoIter = SimpleLinkedListRefIter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        SimpleLinkedListRefIter(&self.head)
     }
 }
 
