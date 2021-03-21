@@ -23,7 +23,7 @@
 
 // Primitive version with no overflow checks.
 // Still have no idea how to avoid bound checks :|
-pub fn find<T: PartialOrd, U: AsRef<[T]>>(array: U, key: T) -> Option<usize> {
+pub fn find<T: Ord, U: AsRef<[T]>>(array: U, key: T) -> Option<usize> {
     let array = array.as_ref();
     let mut l = 0;
     let mut r = array.len();
