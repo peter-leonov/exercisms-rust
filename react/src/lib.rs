@@ -1,7 +1,6 @@
 struct Node<T> {
     value: T,
-    children: Vec<usize>,
-    parents: Vec<usize>,
+    peers: Vec<usize>,
 }
 
 struct SimpleDAG<T>(Vec<Node<T>>);
@@ -14,8 +13,7 @@ impl<T> SimpleDAG<T> {
     fn add(&mut self, value: T) -> usize {
         self.0.push(Node {
             value,
-            children: Vec::new(),
-            parents: Vec::new(),
+            peers: Vec::new(),
         });
         self.0.len() - 1
     }
@@ -32,25 +30,21 @@ impl<T> SimpleDAG<T> {
         // enforce the acyclic nature by simply allowing to link
         // only from early nodes to later nodes
         if parent >= child {
-            return Err("`a` must be lte `b`");
+            return Err("`parent` must be < `child`");
         }
+        self.0.get_mut(child).ok_or("`child` does not exist")?;
 
         self.0
             .get_mut(parent)
-            .expect("`a` does not exist in children")
-            .children
+            .ok_or("`parent` does not exist")?
+            .peers
             .push(child);
-        self.0
-            .get_mut(child)
-            .expect("`a` does not exist in children")
-            .parents
-            .push(parent);
 
         Ok(())
     }
 
     fn children(&self, a: usize) -> &Vec<usize> {
-        &self.0[a].children
+        &self.0[a].peers
     }
 }
 
