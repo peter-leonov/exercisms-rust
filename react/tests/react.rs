@@ -89,7 +89,6 @@ fn compute_cells_update_value_when_dependencies_are_changed() {
 }
 
 #[test]
-#[ignore]
 fn compute_cells_can_depend_on_other_compute_cells() {
     let mut reactor = Reactor::new();
     let input = reactor.create_input(1);
@@ -161,7 +160,6 @@ impl CallbackRecorder {
 }
 
 #[test]
-#[ignore]
 fn compute_cells_fire_callbacks() {
     let cb = CallbackRecorder::new();
     let mut reactor = Reactor::new();
@@ -170,7 +168,7 @@ fn compute_cells_fire_callbacks() {
         .create_compute(&[CellID::Input(input)], |v| v[0] + 1)
         .unwrap();
     assert!(reactor
-        .add_callback(output, |v| cb.callback_called(v))
+        .add_callback(output, &mut |v| cb.callback_called(v))
         .is_some());
     assert!(reactor.set_value(input, 3));
     cb.expect_to_have_been_called_with(4);

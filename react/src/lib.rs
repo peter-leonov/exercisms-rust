@@ -68,7 +68,7 @@ pub struct InputCellID(usize);
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ComputeCellID(usize);
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct CallbackID();
+pub struct CallbackID(usize);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum CellID {
@@ -95,15 +95,20 @@ pub enum RemoveCallbackError {
 // https://stackoverflow.com/a/52934680/2224875
 // https://www.reddit.com/r/rust/comments/9vnumk/what_are_the_drawbacks_of_using_a_boxed_closure/e9dpkvq?utm_source=share&utm_medium=web2x&context=3
 // https://godbolt.org/z/qTobzqesE
-enum Cell<T> {
+enum Cell<'a, T> {
     Input(T),
-    Compute(T, Vec<CellID>, Box<dyn Fn(&[T]) -> T>),
+    Compute(
+        T,
+        Vec<CellID>,
+        Box<dyn Fn(&[T]) -> T>,
+        Vec<&'a mut dyn FnMut(T)>,
+    ),
 }
 
-pub struct Reactor<T>(SimpleDAG<Cell<T>>);
+pub struct Reactor<'a, T>(SimpleDAG<Cell<'a, T>>);
 
 // You are guaranteed that Reactor will only be tested against types that are Copy + PartialEq.
-impl<T: Copy + PartialEq> Reactor<T> {
+impl<'a, T: Copy + PartialEq> Reactor<'a, T> {
     pub fn new() -> Self {
         Self(SimpleDAG::new())
     }
@@ -133,9 +138,12 @@ impl<T: Copy + PartialEq> Reactor<T> {
     ) -> Result<ComputeCellID, CellID> {
         let inputs = self.get_values(dependencies)?;
 
-        let id = self
-            .0
-            .add(Cell::Compute(f(&inputs), dependencies.into(), Box::new(f)));
+        let id = self.0.add(Cell::Compute(
+            f(&inputs),
+            dependencies.into(),
+            Box::new(f),
+            Vec::new(),
+        ));
 
         for d in dependencies {
             self.0.link(d.raw_id(), id).unwrap();
@@ -165,7 +173,7 @@ impl<T: Copy + PartialEq> Reactor<T> {
                 _ => None,
             },
             CellID::Compute(id) => match self.0.get(id.0) {
-                Some(Cell::Compute(value, _, _)) => Some(*value),
+                Some(Cell::Compute(value, _, _, _)) => Some(*value),
                 _ => None,
             },
         }
@@ -208,14 +216,20 @@ impl<T: Copy + PartialEq> Reactor<T> {
     }
 
     fn update_compute(&mut self, id: usize) -> Option<()> {
-        let inputs = if let Cell::Compute(_, dependencies, _) = self.0.get(id)? {
+        let inputs = if let Cell::Compute(_, dependencies, _, _) = self.0.get(id)? {
             self.get_values(dependencies).ok()
         } else {
             None
         }?;
 
-        if let Cell::Compute(value, _, f) = self.0.get_mut(id)? {
-            *value = f(&inputs);
+        if let Cell::Compute(value, _, f, callbacks) = self.0.get_mut(id)? {
+            let new_value = f(&inputs);
+            if new_value != *value {
+                *value = new_value;
+                for cb in callbacks {
+                    cb(new_value);
+                }
+            }
             Some(())
         } else {
             None
@@ -234,12 +248,17 @@ impl<T: Copy + PartialEq> Reactor<T> {
     // * Exactly once if the compute cell's value changed as a result of the set_value call.
     //   The value passed to the callback should be the final value of the compute cell after the
     //   set_value call.
-    pub fn add_callback<F1: FnMut(T)>(
+    pub fn add_callback<F1: FnMut(T) + 'a>(
         &mut self,
-        _id: ComputeCellID,
-        _callback: F1,
+        id: ComputeCellID,
+        callback: &'a mut F1,
     ) -> Option<CallbackID> {
-        unimplemented!()
+        if let Cell::Compute(_, _, _, callbacks) = self.0.get_mut(id.0)? {
+            callbacks.push(callback);
+            Some(CallbackID(1))
+        } else {
+            None
+        }
     }
 
     // Removes the specified callback, using an ID returned from add_callback.
