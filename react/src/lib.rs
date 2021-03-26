@@ -104,7 +104,10 @@ enum Cell<'a, T> {
         T,
         Vec<CellID>,
         Box<dyn Fn(&[T]) -> T>,
-        Vec<Box<dyn FnMut(T) + 'a>>,
+        // Option<Box<T>> takes same space as Box<T>
+        // so no need to invent a sentinel box with a stub fn
+        // Rust does it for us (safely!)
+        Vec<Option<Box<dyn FnMut(T) + 'a>>>,
     ),
 }
 
@@ -230,7 +233,9 @@ impl<'a, T: Copy + PartialEq> Reactor<'a, T> {
             if new_value != *value {
                 *value = new_value;
                 for cb in callbacks {
-                    cb(new_value);
+                    if let Some(cb) = cb {
+                        cb(new_value);
+                    }
                 }
             }
             Some(())
@@ -257,8 +262,8 @@ impl<'a, T: Copy + PartialEq> Reactor<'a, T> {
         callback: F1,
     ) -> Option<CallbackID> {
         if let Cell::Compute(_, _, _, callbacks) = self.0.get_mut(id.0)? {
-            callbacks.push(Box::new(callback));
-            Some(CallbackID(1))
+            callbacks.push(Some(Box::new(callback)));
+            Some(CallbackID(callbacks.len() - 1))
         } else {
             None
         }
@@ -271,13 +276,17 @@ impl<'a, T: Copy + PartialEq> Reactor<'a, T> {
     // A removed callback should no longer be called.
     pub fn remove_callback(
         &mut self,
-        cell: ComputeCellID,
-        callback: CallbackID,
+        cell_id: ComputeCellID,
+        callback_id: CallbackID,
     ) -> Result<(), RemoveCallbackError> {
-        unimplemented!(
-            "Remove the callback identified by the CallbackID {:?} from the cell {:?}",
-            callback,
-            cell,
-        )
+        if let Some(Cell::Compute(_, _, _, callbacks)) = self.0.get_mut(cell_id.0) {
+            if let Some(_) = callbacks[callback_id.0].take() {
+                Ok(())
+            } else {
+                Err(RemoveCallbackError::NonexistentCallback)
+            }
+        } else {
+            Err(RemoveCallbackError::NonexistentCell)
+        }
     }
 }
