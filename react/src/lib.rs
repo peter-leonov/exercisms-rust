@@ -205,6 +205,7 @@ impl<'a, T: Copy + PartialEq> Reactor<'a, T> {
         }
     }
 
+    // BFS with only increasing id
     fn propagate_change(&mut self, id: InputCellID) -> Option<()> {
         // POC with a priority queue done as a simple vector
         let mut pq = Vec::new();
