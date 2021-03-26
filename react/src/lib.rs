@@ -95,13 +95,16 @@ pub enum RemoveCallbackError {
 // https://stackoverflow.com/a/52934680/2224875
 // https://www.reddit.com/r/rust/comments/9vnumk/what_are_the_drawbacks_of_using_a_boxed_closure/e9dpkvq?utm_source=share&utm_medium=web2x&context=3
 // https://godbolt.org/z/qTobzqesE
+
+// and even more with lifetimes for the FnMut():
+// https://stackoverflow.com/questions/41081240/idiomatic-callbacks-in-rust
 enum Cell<'a, T> {
     Input(T),
     Compute(
         T,
         Vec<CellID>,
         Box<dyn Fn(&[T]) -> T>,
-        Vec<&'a mut dyn FnMut(T)>,
+        Vec<Box<dyn FnMut(T) + 'a>>,
     ),
 }
 
@@ -251,10 +254,10 @@ impl<'a, T: Copy + PartialEq> Reactor<'a, T> {
     pub fn add_callback<F1: FnMut(T) + 'a>(
         &mut self,
         id: ComputeCellID,
-        callback: &'a mut F1,
+        callback: F1,
     ) -> Option<CallbackID> {
         if let Cell::Compute(_, _, _, callbacks) = self.0.get_mut(id.0)? {
-            callbacks.push(callback);
+            callbacks.push(Box::new(callback));
             Some(CallbackID(1))
         } else {
             None

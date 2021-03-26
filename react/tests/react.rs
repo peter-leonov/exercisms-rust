@@ -168,14 +168,13 @@ fn compute_cells_fire_callbacks() {
         .create_compute(&[CellID::Input(input)], |v| v[0] + 1)
         .unwrap();
     assert!(reactor
-        .add_callback(output, &mut |v| cb.callback_called(v))
+        .add_callback(output, |v| cb.callback_called(v))
         .is_some());
     assert!(reactor.set_value(input, 3));
     cb.expect_to_have_been_called_with(4);
 }
 
 #[test]
-#[ignore]
 fn error_adding_callback_to_nonexistent_cell() {
     let mut dummy_reactor = Reactor::new();
     let input = dummy_reactor.create_input(1);
