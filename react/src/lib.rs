@@ -195,8 +195,10 @@ impl<'a, T: Copy + PartialEq> Reactor<'a, T> {
     // As before, that turned out to add too much extra complexity.
     pub fn set_value(&mut self, id: InputCellID, new_value: T) -> bool {
         if let Some(Cell::Input(value)) = self.0.get_mut(id.0) {
-            *value = new_value;
-            self.propagate_change(id);
+            if *value != new_value {
+                *value = new_value;
+                self.propagate_change(id);
+            }
             true
         } else {
             false
@@ -205,7 +207,6 @@ impl<'a, T: Copy + PartialEq> Reactor<'a, T> {
 
     fn propagate_change(&mut self, id: InputCellID) -> Option<()> {
         // POC with a priority queue done as a simple vector
-        // let mut cell = self.0.get_mut(id.0)?;
         let mut pq = Vec::new();
         pq.push(id.0);
 
