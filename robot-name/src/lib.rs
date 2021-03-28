@@ -15,18 +15,50 @@ impl LCG {
   pub const fn new(x: u32, a: u32, c: u32, m: u32) -> Self {
     Self { x, a, c, m }
   }
-}
 
-impl Iterator for LCG {
-  type Item = u32;
-
-  fn next(&mut self) -> Option<Self::Item> {
+  pub fn next(&mut self) -> u32 {
     self.x = (self.a * self.x + self.c) % self.m;
-    Some(self.x)
+    self.x
   }
 }
 
-static mut NAMES: LCG = LCG::new(123_456, 261, 77, 676_000);
+// A mutex is too heavy here as the whole state fits into an atomic,
+// but involving all the lock-free mental pressure for a robot name…
+// I'd go with unsafe here.
+fn get_next_id() -> u32 {
+  const M: u32 = 26 * 26 * 1000;
+  const PM: u32 = 2 * 13 * 5;
+  const C: u32 = 7 * 11;
+  const A1: u32 = PM * 2;
+  const A: u32 = A1 + 1;
+  const X: u32 = M / 3;
+
+  static mut NAMES: LCG = LCG::new(X, A, C, M);
+  // static mut NAMES: LCG = LCG::new(123_456, 261, 77, 676_000);
+
+  // The app is single threaded,
+  // otherwise we'd rather have a thread safe robot factory
+  // with atomics or mutexes.
+  unsafe { NAMES.next() }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::collections::HashSet;
+
+  #[test]
+  fn test_the_prng_constants() {
+    const M: u32 = 26 * 26 * 1000;
+
+    let mut seen = HashSet::with_capacity(M as usize);
+
+    for _ in 0..M {
+      seen.insert(super::get_next_id());
+    }
+
+    assert_eq!(seen.len(), M as usize);
+  }
+}
 
 fn number_to_name(n: u32) -> String {
   let numbers = n % 1000;
@@ -57,7 +89,7 @@ impl Robot {
   }
 
   pub fn reset_name(&mut self) {
-    let n = unsafe { NAMES.next().unwrap() };
+    let n = get_next_id();
     self.name = number_to_name(n)
   }
 }

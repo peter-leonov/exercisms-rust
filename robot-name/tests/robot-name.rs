@@ -1,5 +1,4 @@
 use robot_name as robot;
-use std::collections::HashSet;
 
 fn assert_name_matches_pattern(n: &str) {
     assert!(n.len() == 5, "name is exactly 5 characters long");
@@ -31,28 +30,6 @@ fn test_name_should_match_expected_pattern() {
 #[test]
 fn test_name_is_persistent() {
     assert_name_is_persistent(&robot::Robot::new());
-}
-
-#[test]
-fn test_prng() {
-    // `m` and `c` are relatively prime,
-    // `a − 1` is divisible by all prime factors of m,
-    // a − 1 is divisible by 4 if m is divisible by 4.
-    let m = 26 * 26 * 1000;
-    let pm = 2 * 13 * 5;
-    let c = 7 * 11;
-    let a1 = pm * 2;
-    let a = a1 + 1;
-    let x = m / 2;
-
-    let mut g = robot::LCG::new(x, a, c, m);
-    let mut seen = HashSet::with_capacity(m as usize);
-
-    for _ in 0..m {
-        seen.insert(g.next());
-    }
-
-    assert_eq!(seen.len(), m as usize);
 }
 
 #[test]
