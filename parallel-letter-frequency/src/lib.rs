@@ -4,7 +4,6 @@ use std::thread;
 
 pub fn frequency(input: &[&str], worker_count: usize) -> HashMap<char, usize> {
     // naive clone everything
-    let input: Vec<_> = input.iter().map(|s| s.clone()).collect();
     let input = input.join("");
 
     let result = thread::spawn(|| {
