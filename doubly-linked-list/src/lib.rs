@@ -3,6 +3,8 @@
 // You are free to use anything in it, but it's mainly for the test framework.
 mod pre_implemented;
 
+use std::ptr;
+
 struct Node<T> {
     value: T,
     next: Link<T>,
@@ -10,7 +12,6 @@ struct Node<T> {
 }
 
 type Link<T> = Option<Box<Node<T>>>;
-type Ref<'a, T> = Option<&'a mut Box<Node<T>>>;
 
 pub struct LinkedList<T> {
     head: Link<T>,
@@ -18,8 +19,8 @@ pub struct LinkedList<T> {
 }
 
 pub struct Cursor<'a, T> {
-    // list: &'a LinkedList<T>,
-    current: Ref<'a, T>,
+    list: &'a mut LinkedList<T>,
+    current: *mut Node<T>,
 }
 
 pub struct Iter<'a, T>(&'a Link<T>);
@@ -65,9 +66,15 @@ impl<'a, T> LinkedList<T> {
     }
     /// Return a cursor positioned on the back element
     pub fn cursor_back(&'a mut self) -> Cursor<'a, T> {
+        let current = if let Some(node) = &mut self.back {
+            node.as_mut()
+        } else {
+            ptr::null_mut()
+        };
+
         Cursor {
-            // list: self,
-            current: self.back.as_mut(),
+            list: self,
+            current,
         }
     }
 
@@ -89,10 +96,16 @@ impl<T> Cursor<'_, T> {
     /// return a reference to the new position
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Option<&mut T> {
-        if let Some(node) = self.current.take() {
-            self.current = node.next.as_mut();
-        };
-        self.current.as_mut().map(|node| &mut node.value)
+        unsafe {
+            if let Some(node) = self.current.as_mut() {
+                self.current = if let Some(node) = &mut node.next {
+                    node.as_mut()
+                } else {
+                    ptr::null_mut()
+                };
+            };
+            self.current.as_mut().map(|node| &mut node.value)
+        }
     }
 
     /// Move one position backward (towards the front) and
@@ -109,12 +122,15 @@ impl<T> Cursor<'_, T> {
     }
 
     pub fn insert_after(&mut self, element: T) {
-        match self.current {
-            Some(ref mut node) => {
-                node.next = Some(Node::boxed(element));
+        let new_node = Some(Node::boxed(element));
+        match unsafe { self.current.as_mut() } {
+            Some(node) => {
+                node.next = new_node;
             }
-            None => (),
-        }
+            None => {
+                self.list.head = new_node;
+            }
+        };
     }
 
     pub fn insert_before(&mut self, _element: T) {

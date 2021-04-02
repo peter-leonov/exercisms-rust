@@ -19,7 +19,6 @@ fn basics_empty_list() {
 
 // push / pop at back ————————————————————————————————————————
 #[test]
-#[ignore]
 fn basics_single_element_back() {
     let mut list: LinkedList<i32> = LinkedList::new();
     list.push_back(5);
