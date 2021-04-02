@@ -15,7 +15,7 @@ type Link<T> = Option<Box<Node<T>>>;
 
 pub struct LinkedList<T> {
     head: Link<T>,
-    back: Link<T>,
+    back: *mut Node<T>,
 }
 
 pub struct Cursor<'a, T> {
@@ -39,7 +39,7 @@ impl<'a, T> LinkedList<T> {
     pub fn new() -> Self {
         Self {
             head: None,
-            back: None,
+            back: ptr::null_mut(),
         }
     }
 
@@ -58,19 +58,20 @@ impl<'a, T> LinkedList<T> {
 
     /// Return a cursor positioned on the front element
     pub fn cursor_front(&'a mut self) -> Cursor<'a, T> {
-        unimplemented!()
-        // Cursor {
-        //     list: self,
-        //     current: self.head.as_mut(),
-        // }
-    }
-    /// Return a cursor positioned on the back element
-    pub fn cursor_back(&'a mut self) -> Cursor<'a, T> {
-        let current = if let Some(node) = &mut self.back {
+        let current = if let Some(node) = &mut self.head {
             node.as_mut()
         } else {
             ptr::null_mut()
         };
+
+        Cursor {
+            list: self,
+            current,
+        }
+    }
+    /// Return a cursor positioned on the back element
+    pub fn cursor_back(&'a mut self) -> Cursor<'a, T> {
+        let current = self.back;
 
         Cursor {
             list: self,
@@ -118,17 +119,29 @@ impl<T> Cursor<'_, T> {
     /// to the neighboring element that's closest to the back. This can be
     /// either the next or previous position.
     pub fn take(&mut self) -> Option<T> {
-        unimplemented!()
+        match unsafe { self.current.as_mut() } {
+            Some(node) => match node.prev {
+                Some(_) => unimplemented!(),
+                None => match node.next {
+                    Some(_) => unimplemented!(),
+                    None => self.list.head.take().map(|node| node.value),
+                },
+            },
+            None => None,
+        }
     }
 
     pub fn insert_after(&mut self, element: T) {
-        let new_node = Some(Node::boxed(element));
+        let mut new_node = Node::boxed(element);
         match unsafe { self.current.as_mut() } {
             Some(node) => {
-                node.next = new_node;
+                node.next = Some(new_node);
             }
             None => {
-                self.list.head = new_node;
+                // empty list case
+                self.current = new_node.as_mut();
+                self.list.back = new_node.as_mut();
+                self.list.head = Some(new_node);
             }
         };
     }
