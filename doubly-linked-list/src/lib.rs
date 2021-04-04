@@ -58,8 +58,8 @@ impl<'a, T> LinkedList<T> {
 
     /// Return a cursor positioned on the front element
     pub fn cursor_front(&'a mut self) -> Cursor<'a, T> {
-        let current = if let Some(node) = &mut self.head {
-            node.as_mut()
+        let current = if let Some(head) = &mut self.head {
+            head.as_mut()
         } else {
             ptr::null_mut()
         };
@@ -85,12 +85,19 @@ impl<'a, T> LinkedList<T> {
     }
 }
 
+impl<T> Drop for LinkedList<T> {
+    fn drop(&mut self) {
+        let mut cursor = self.cursor_front();
+        while let Some(_) = cursor.take() {}
+    }
+}
+
 // the cursor is expected to act as if it is at the position of an element
 // and it also has to work with and be able to insert into an empty list.
 impl<T> Cursor<'_, T> {
     /// Take a mutable reference to the current element
     pub fn peek_mut(&mut self) -> Option<&mut T> {
-        unimplemented!()
+        unsafe { self.current.as_mut().map(|current| &mut current.value) }
     }
 
     /// Move one position forward (towards the back) and
@@ -131,12 +138,14 @@ impl<T> Cursor<'_, T> {
                 Some(current) => match current.prev.as_mut() {
                     Some(prev) => match current.next.take() {
                         Some(mut next) => {
+                            self.current = next.as_mut();
                             next.prev = prev;
                             // need to get current from the owner
                             let current = prev.next.replace(next);
                             current.map(|node| node.value)
                         }
                         None => {
+                            self.current = prev;
                             self.list.back = prev;
                             // need to get current from the owner
                             let current = prev.next.take();
@@ -145,12 +154,14 @@ impl<T> Cursor<'_, T> {
                     },
                     None => match current.next.take() {
                         Some(mut next) => {
+                            self.current = next.as_mut();
                             next.prev = ptr::null_mut();
                             // need to get current from the owner
                             let current = self.list.head.replace(next);
                             current.map(|node| node.value)
                         }
                         None => {
+                            self.current = ptr::null_mut();
                             self.list.back = ptr::null_mut();
                             // need to get current from the owner
                             let current = self.list.head.take();

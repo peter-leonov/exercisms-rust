@@ -188,7 +188,6 @@ fn cursor_insert_before_in_middle() {
 
 // "iterates" via next() and checks that it visits the right elements
 #[test]
-#[ignore]
 fn cursor_next_and_peek() {
     let mut list = (0..10).collect::<LinkedList<_>>();
     let mut cursor = list.cursor_front();
@@ -204,7 +203,6 @@ fn cursor_next_and_peek() {
 
 // "iterates" via prev() and checks that it visits the right elements
 #[test]
-#[ignore]
 fn cursor_prev_and_peek() {
     let mut list = (0..10).collect::<LinkedList<_>>();
     let mut cursor = list.cursor_back();
@@ -220,7 +218,6 @@ fn cursor_prev_and_peek() {
 
 // removes all elements starting from the middle
 #[test]
-#[ignore]
 fn cursor_take() {
     let mut list = (0..10).collect::<LinkedList<_>>();
     let mut cursor = list.cursor_front();
@@ -243,7 +240,6 @@ fn cursor_take() {
 // may pass for incorrect programs if double frees happen
 // exactly as often as destructor leaks
 #[test]
-#[ignore]
 fn drop_no_double_frees() {
     use std::cell::Cell;
     struct DropCounter<'a>(&'a Cell<usize>);
@@ -268,7 +264,6 @@ fn drop_no_double_frees() {
 }
 
 #[test]
-#[ignore]
 fn drop_large_list() {
     drop((0..2_000_000).collect::<LinkedList<i32>>());
 }
