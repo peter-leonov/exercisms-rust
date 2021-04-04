@@ -98,8 +98,8 @@ impl<T> Cursor<'_, T> {
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Option<&mut T> {
         unsafe {
-            if let Some(node) = self.current.as_mut() {
-                self.current = if let Some(node) = &mut node.next {
+            if let Some(current) = self.current.as_mut() {
+                self.current = if let Some(node) = &mut current.next {
                     node.as_mut()
                 } else {
                     ptr::null_mut()
@@ -112,7 +112,14 @@ impl<T> Cursor<'_, T> {
     /// Move one position backward (towards the front) and
     /// return a reference to the new position
     pub fn prev(&mut self) -> Option<&mut T> {
-        unimplemented!()
+        unsafe {
+            if let Some(current) = self.current.as_mut() {
+                self.current = current.prev;
+                self.current.as_mut().map(|node| &mut node.value)
+            } else {
+                None
+            }
+        }
     }
 
     /// Remove and return the element at the current position and move the cursor
@@ -121,11 +128,34 @@ impl<T> Cursor<'_, T> {
     pub fn take(&mut self) -> Option<T> {
         unsafe {
             match self.current.as_mut() {
-                Some(node) => match node.prev.as_mut() {
-                    Some(_) => unimplemented!(),
-                    None => match node.next {
-                        Some(_) => unimplemented!(),
-                        None => self.list.head.take().map(|node| node.value),
+                Some(current) => match current.prev.as_mut() {
+                    Some(prev) => match current.next.take() {
+                        Some(mut next) => {
+                            next.prev = prev;
+                            // need to get current from the owner
+                            let current = prev.next.replace(next);
+                            current.map(|node| node.value)
+                        }
+                        None => {
+                            self.list.back = prev;
+                            // need to get current from the owner
+                            let current = prev.next.take();
+                            current.map(|node| node.value)
+                        }
+                    },
+                    None => match current.next.take() {
+                        Some(mut next) => {
+                            next.prev = ptr::null_mut();
+                            // need to get current from the owner
+                            let current = self.list.head.replace(next);
+                            current.map(|node| node.value)
+                        }
+                        None => {
+                            self.list.back = ptr::null_mut();
+                            // need to get current from the owner
+                            let current = self.list.head.take();
+                            current.map(|node| node.value)
+                        }
                     },
                 },
                 None => None,
@@ -136,9 +166,17 @@ impl<T> Cursor<'_, T> {
     pub fn insert_after(&mut self, element: T) {
         let mut new_node = Node::boxed(element);
         match unsafe { self.current.as_mut() } {
-            Some(node) => {
-                new_node.prev = node;
-                node.next = Some(new_node);
+            Some(current) => {
+                new_node.prev = current;
+                if let Some(next) = &mut current.next {
+                    next.prev = new_node.as_mut();
+                } else {
+                    // end of list
+                    self.list.back = new_node.as_mut();
+                }
+                // new_node now owns the node.next
+                new_node.next = current.next.take();
+                current.next = Some(new_node);
             }
             None => {
                 // empty list case
@@ -149,8 +187,34 @@ impl<T> Cursor<'_, T> {
         };
     }
 
-    pub fn insert_before(&mut self, _element: T) {
-        unimplemented!()
+    pub fn insert_before(&mut self, element: T) {
+        let mut new_node = Node::boxed(element);
+        match unsafe { self.current.as_mut() } {
+            Some(current) => {
+                if let Some(prev) = unsafe { current.prev.as_mut() } {
+                    current.prev = new_node.as_mut();
+                    new_node.prev = prev;
+                    // need to get current from the owner
+                    let current = prev.next.take();
+                    new_node.next = current;
+                    prev.next = Some(new_node);
+                } else {
+                    // end of list
+                    current.prev = new_node.as_mut();
+                    new_node.prev = ptr::null_mut();
+                    // need to get current from the owner
+                    let current = self.list.head.take();
+                    new_node.next = current;
+                    self.list.head = Some(new_node);
+                }
+            }
+            None => {
+                // empty list case
+                self.current = new_node.as_mut();
+                self.list.back = new_node.as_mut();
+                self.list.head = Some(new_node);
+            }
+        };
     }
 }
 

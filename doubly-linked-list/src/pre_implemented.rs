@@ -46,8 +46,7 @@ impl<T> std::iter::FromIterator<T> for LinkedList<T> {
 // seek methods, return false if end of list is reached prematurely
 impl<T> Cursor<'_, T> {
     pub fn seek_forward(&mut self, n: usize) -> bool {
-        unimplemented!()
-        // (0..n).all(|_| self.next().is_some())
+        (0..n).all(|_| self.next().is_some())
     }
 
     pub fn seek_backward(&mut self, n: usize) -> bool {

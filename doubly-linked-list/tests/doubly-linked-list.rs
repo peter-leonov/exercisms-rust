@@ -33,7 +33,6 @@ fn basics_single_element_back() {
 }
 
 #[test]
-#[ignore]
 fn basics_push_pop_at_back() {
     let mut list: LinkedList<i32> = LinkedList::new();
     for i in 0..10 {
@@ -52,7 +51,6 @@ fn basics_push_pop_at_back() {
 
 // push / pop at front ———————————————————————————————————————
 #[test]
-#[ignore]
 fn basics_single_element_front() {
     let mut list: LinkedList<i32> = LinkedList::new();
     list.push_front(5);
@@ -67,7 +65,6 @@ fn basics_single_element_front() {
 }
 
 #[test]
-#[ignore]
 fn basics_push_pop_at_front() {
     let mut list: LinkedList<i32> = LinkedList::new();
     for i in 0..10 {
@@ -86,7 +83,6 @@ fn basics_push_pop_at_front() {
 
 // push / pop at mixed sides —————————————————————————————————
 #[test]
-#[ignore]
 fn basics_push_front_pop_back() {
     let mut list: LinkedList<i32> = LinkedList::new();
     for i in 0..10 {
@@ -104,7 +100,6 @@ fn basics_push_front_pop_back() {
 }
 
 #[test]
-#[ignore]
 fn basics_push_back_pop_front() {
     let mut list: LinkedList<i32> = LinkedList::new();
     for i in 0..10 {
@@ -126,7 +121,6 @@ fn basics_push_back_pop_front() {
 // ———————————————————————————————————————————————————————————
 
 #[test]
-#[ignore]
 fn iter() {
     let mut list: LinkedList<i32> = LinkedList::new();
     for num in 0..10 {
@@ -143,7 +137,6 @@ fn iter() {
 // ———————————————————————————————————————————————————————————
 
 #[test]
-#[ignore]
 fn cursor_insert_before_on_empty_list() {
     // insert_after on empty list is already tested via push_back()
     let mut list = LinkedList::new();
@@ -152,7 +145,6 @@ fn cursor_insert_before_on_empty_list() {
 }
 
 #[test]
-#[ignore]
 fn cursor_insert_after_in_middle() {
     let mut list = (0..10).collect::<LinkedList<_>>();
 
@@ -174,7 +166,6 @@ fn cursor_insert_after_in_middle() {
 }
 
 #[test]
-#[ignore]
 fn cursor_insert_before_in_middle() {
     let mut list = (0..10).collect::<LinkedList<_>>();
 
