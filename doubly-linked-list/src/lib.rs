@@ -8,7 +8,7 @@ use std::ptr;
 struct Node<T> {
     value: T,
     next: Link<T>,
-    prev: Link<T>,
+    prev: *mut Node<T>,
 }
 
 type Link<T> = Option<Box<Node<T>>>;
@@ -30,7 +30,7 @@ impl<T> Node<T> {
         Box::new(Self {
             value,
             next: None,
-            prev: None,
+            prev: ptr::null_mut(),
         })
     }
 }
@@ -119,15 +119,17 @@ impl<T> Cursor<'_, T> {
     /// to the neighboring element that's closest to the back. This can be
     /// either the next or previous position.
     pub fn take(&mut self) -> Option<T> {
-        match unsafe { self.current.as_mut() } {
-            Some(node) => match node.prev {
-                Some(_) => unimplemented!(),
-                None => match node.next {
+        unsafe {
+            match self.current.as_mut() {
+                Some(node) => match node.prev.as_mut() {
                     Some(_) => unimplemented!(),
-                    None => self.list.head.take().map(|node| node.value),
+                    None => match node.next {
+                        Some(_) => unimplemented!(),
+                        None => self.list.head.take().map(|node| node.value),
+                    },
                 },
-            },
-            None => None,
+                None => None,
+            }
         }
     }
 
@@ -135,6 +137,7 @@ impl<T> Cursor<'_, T> {
         let mut new_node = Node::boxed(element);
         match unsafe { self.current.as_mut() } {
             Some(node) => {
+                new_node.prev = node;
                 node.next = Some(new_node);
             }
             None => {
