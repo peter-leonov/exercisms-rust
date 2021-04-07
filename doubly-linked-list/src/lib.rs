@@ -1,3 +1,7 @@
+//! I tried to still have some ownership in the `node.next`
+//! chain, but as you can see this ended up being a mess,
+//! I'd better make all of it on pointers and know no troubles.
+
 // this module adds some functionality based on the required implementations
 // here like: `LinkedList::pop_back` or `Clone for LinkedList<T>`
 // You are free to use anything in it, but it's mainly for the test framework.
