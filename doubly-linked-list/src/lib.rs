@@ -3,7 +3,7 @@
 // You are free to use anything in it, but it's mainly for the test framework.
 mod pre_implemented;
 
-use std::ptr;
+use std::ptr::{self, NonNull};
 
 struct Node<T> {
     value: T,
@@ -15,12 +15,12 @@ type Link<T> = Option<Box<Node<T>>>;
 
 pub struct LinkedList<T> {
     head: Link<T>,
-    back: *mut Node<T>,
+    back: Option<NonNull<Node<T>>>,
 }
 
 pub struct Cursor<'a, T> {
     list: &'a mut LinkedList<T>,
-    current: *mut Node<T>,
+    current: Option<NonNull<Node<T>>>,
 }
 
 pub struct Iter<'a, T>(&'a Link<T>);
@@ -39,7 +39,7 @@ impl<'a, T> LinkedList<T> {
     pub fn new() -> Self {
         Self {
             head: None,
-            back: ptr::null_mut(),
+            back: None,
         }
     }
 
@@ -59,9 +59,9 @@ impl<'a, T> LinkedList<T> {
     /// Return a cursor positioned on the front element
     pub fn cursor_front(&'a mut self) -> Cursor<'a, T> {
         let current = if let Some(head) = &mut self.head {
-            head.as_mut()
+            unsafe { Some(NonNull::new_unchecked(head.as_mut())) }
         } else {
-            ptr::null_mut()
+            None
         };
 
         Cursor {
@@ -97,7 +97,11 @@ impl<T> Drop for LinkedList<T> {
 impl<T> Cursor<'_, T> {
     /// Take a mutable reference to the current element
     pub fn peek_mut(&mut self) -> Option<&mut T> {
-        unsafe { self.current.as_mut().map(|current| &mut current.value) }
+        unsafe {
+            self.current
+                .as_mut()
+                .map(|current| &mut current.as_mut().value)
+        }
     }
 
     /// Move one position forward (towards the back) and
@@ -106,13 +110,13 @@ impl<T> Cursor<'_, T> {
     pub fn next(&mut self) -> Option<&mut T> {
         unsafe {
             if let Some(current) = self.current.as_mut() {
-                self.current = if let Some(node) = &mut current.next {
-                    node.as_mut()
+                self.current = if let Some(node) = &mut current.as_mut().next {
+                    Some(NonNull::new_unchecked(node.as_mut()))
                 } else {
-                    ptr::null_mut()
+                    None
                 };
             };
-            self.current.as_mut().map(|node| &mut node.value)
+            self.current.as_mut().map(|node| &mut node.as_mut().value)
         }
     }
 
@@ -121,8 +125,8 @@ impl<T> Cursor<'_, T> {
     pub fn prev(&mut self) -> Option<&mut T> {
         unsafe {
             if let Some(current) = self.current.as_mut() {
-                self.current = current.prev;
-                self.current.as_mut().map(|node| &mut node.value)
+                self.current = Some(NonNull::new_unchecked(current.as_mut().prev));
+                self.current.as_mut().map(|node| &mut node.as_mut().value)
             } else {
                 None
             }
@@ -135,34 +139,34 @@ impl<T> Cursor<'_, T> {
     pub fn take(&mut self) -> Option<T> {
         unsafe {
             match self.current.as_mut() {
-                Some(current) => match current.prev.as_mut() {
-                    Some(prev) => match current.next.take() {
+                Some(current) => match current.as_mut().prev.as_mut() {
+                    Some(prev) => match current.as_mut().next.take() {
                         Some(mut next) => {
-                            self.current = next.as_mut();
+                            self.current = Some(NonNull::new_unchecked(next.as_mut()));
                             next.prev = prev;
                             // need to get current from the owner
                             let current = prev.next.replace(next);
                             current.map(|node| node.value)
                         }
                         None => {
-                            self.current = prev;
-                            self.list.back = prev;
+                            self.current = Some(NonNull::new_unchecked(prev));
+                            self.list.back = Some(NonNull::new_unchecked(prev));
                             // need to get current from the owner
                             let current = prev.next.take();
                             current.map(|node| node.value)
                         }
                     },
-                    None => match current.next.take() {
+                    None => match current.as_mut().next.take() {
                         Some(mut next) => {
-                            self.current = next.as_mut();
+                            self.current = Some(NonNull::new_unchecked(next.as_mut()));
                             next.prev = ptr::null_mut();
                             // need to get current from the owner
                             let current = self.list.head.replace(next);
                             current.map(|node| node.value)
                         }
                         None => {
-                            self.current = ptr::null_mut();
-                            self.list.back = ptr::null_mut();
+                            self.current = None;
+                            self.list.back = None;
                             // need to get current from the owner
                             let current = self.list.head.take();
                             current.map(|node| node.value)
@@ -176,55 +180,59 @@ impl<T> Cursor<'_, T> {
 
     pub fn insert_after(&mut self, element: T) {
         let mut new_node = Node::boxed(element);
-        match unsafe { self.current.as_mut() } {
-            Some(current) => {
-                new_node.prev = current;
-                if let Some(next) = &mut current.next {
-                    next.prev = new_node.as_mut();
-                } else {
-                    // end of list
-                    self.list.back = new_node.as_mut();
+        unsafe {
+            match self.current.as_mut() {
+                Some(current) => {
+                    new_node.prev = current.as_mut();
+                    if let Some(next) = &mut current.as_mut().next {
+                        next.prev = new_node.as_mut();
+                    } else {
+                        // end of list
+                        self.list.back = Some(NonNull::new_unchecked(new_node.as_mut()));
+                    }
+                    // new_node now owns the node.next
+                    new_node.next = current.as_mut().next.take();
+                    current.as_mut().next = Some(new_node);
                 }
-                // new_node now owns the node.next
-                new_node.next = current.next.take();
-                current.next = Some(new_node);
-            }
-            None => {
-                // empty list case
-                self.current = new_node.as_mut();
-                self.list.back = new_node.as_mut();
-                self.list.head = Some(new_node);
-            }
+                None => {
+                    // empty list case
+                    self.current = Some(NonNull::new_unchecked(new_node.as_mut()));
+                    self.list.back = Some(NonNull::new_unchecked(new_node.as_mut()));
+                    self.list.head = Some(new_node);
+                }
+            };
         };
     }
 
     pub fn insert_before(&mut self, element: T) {
         let mut new_node = Node::boxed(element);
-        match unsafe { self.current.as_mut() } {
-            Some(current) => {
-                if let Some(prev) = unsafe { current.prev.as_mut() } {
-                    current.prev = new_node.as_mut();
-                    new_node.prev = prev;
-                    // need to get current from the owner
-                    let current = prev.next.take();
-                    new_node.next = current;
-                    prev.next = Some(new_node);
-                } else {
-                    // end of list
-                    current.prev = new_node.as_mut();
-                    new_node.prev = ptr::null_mut();
-                    // need to get current from the owner
-                    let current = self.list.head.take();
-                    new_node.next = current;
+        unsafe {
+            match self.current.as_mut() {
+                Some(current) => {
+                    if let Some(prev) = current.as_mut().prev.as_mut() {
+                        current.as_mut().prev = new_node.as_mut();
+                        new_node.prev = prev;
+                        // need to get current from the owner
+                        let current = prev.next.take();
+                        new_node.next = current;
+                        prev.next = Some(new_node);
+                    } else {
+                        // end of list
+                        current.as_mut().prev = new_node.as_mut();
+                        new_node.prev = ptr::null_mut();
+                        // need to get current from the owner
+                        let current = self.list.head.take();
+                        new_node.next = current;
+                        self.list.head = Some(new_node);
+                    }
+                }
+                None => {
+                    // empty list case
+                    self.current = Some(NonNull::new_unchecked(new_node.as_mut()));
+                    self.list.back = Some(NonNull::new_unchecked(new_node.as_mut()));
                     self.list.head = Some(new_node);
                 }
-            }
-            None => {
-                // empty list case
-                self.current = new_node.as_mut();
-                self.list.back = new_node.as_mut();
-                self.list.head = Some(new_node);
-            }
+            };
         };
     }
 }
