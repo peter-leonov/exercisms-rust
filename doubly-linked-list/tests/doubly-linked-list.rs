@@ -277,9 +277,7 @@ fn drop_large_list() {
 // Additional tests for code that must *not* compile are in
 // pre_implemented.rs for technical reasons.
 
-#[cfg(feature = "advanced")]
 #[test]
-#[ignore]
 fn advanced_linked_list_is_send_sync() {
     trait AssertSend: Send {}
     trait AssertSync: Sync {}
@@ -288,10 +286,8 @@ fn advanced_linked_list_is_send_sync() {
     impl<T: Sync> AssertSync for LinkedList<T> {}
 }
 
-#[cfg(feature = "advanced")]
 #[allow(dead_code)]
 #[test]
-#[ignore]
 fn advanced_is_covariant() {
     fn a<'a>(x: LinkedList<&'static str>) -> LinkedList<&'a str> {
         x
