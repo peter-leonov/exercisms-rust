@@ -1,11 +1,8 @@
-use std::marker::PhantomData;
-
 pub struct CircularBuffer<T> {
-    // This field is here to make the template compile and not to
-    // complain about unused type parameter 'T'. Once you start
-    // solving the exercise, delete this field and the 'std::marker::PhantomData'
-    // import.
-    field: PhantomData<T>,
+    capacity: usize,
+    head: usize,
+    back: usize,
+    buffer: Vec<Option<T>>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -14,30 +11,76 @@ pub enum Error {
     FullBuffer,
 }
 
+const MAX_CAPACITY: usize = usize::MAX >> 2;
+
 impl<T> CircularBuffer<T> {
     pub fn new(capacity: usize) -> Self {
-        unimplemented!(
-            "Construct a new CircularBuffer with the capacity to hold {}.",
-            match capacity {
-                1 => "1 element".to_string(),
-                _ => format!("{} elements", capacity),
-            }
-        );
+        assert!(capacity < MAX_CAPACITY);
+
+        let mut buffer = Vec::with_capacity(capacity);
+        for _ in 0..capacity {
+            buffer.push(None);
+        }
+
+        Self {
+            capacity,
+            head: 0,
+            back: 0,
+            buffer,
+        }
     }
 
-    pub fn write(&mut self, _element: T) -> Result<(), Error> {
-        unimplemented!("Write the passed element to the CircularBuffer or return FullBuffer error if CircularBuffer is full.");
+    pub fn is_full(&self) -> bool {
+        self.head - self.back == self.capacity
+    }
+
+    pub fn write(&mut self, element: T) -> Result<(), Error> {
+        if self.is_full() {
+            Err(Error::FullBuffer)
+        } else {
+            self.buffer[self.head % self.capacity] = Some(element);
+            self.head += 1;
+            Ok(())
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.back == self.head
+    }
+
+    #[inline(always)]
+    pub fn wrap(&mut self) {
+        if self.back > self.capacity {
+            self.back -= self.capacity;
+            self.head -= self.capacity;
+        }
     }
 
     pub fn read(&mut self) -> Result<T, Error> {
-        unimplemented!("Read the oldest element from the CircularBuffer or return EmptyBuffer error if CircularBuffer is empty.");
+        if self.is_empty() {
+            Err(Error::EmptyBuffer)
+        } else {
+            let element = self
+                .buffer
+                .get_mut(self.back % self.capacity)
+                .unwrap()
+                .take()
+                .unwrap();
+            self.back += 1;
+            self.wrap();
+            Ok(element)
+        }
     }
 
     pub fn clear(&mut self) {
-        unimplemented!("Clear the CircularBuffer.");
+        // we need to properly drop the remaining elements
+        while let Ok(_) = self.read() {}
     }
 
-    pub fn overwrite(&mut self, _element: T) {
-        unimplemented!("Write the passed element to the CircularBuffer, overwriting the existing elements if CircularBuffer is full.");
+    pub fn overwrite(&mut self, element: T) {
+        if self.is_full() {
+            self.read().unwrap();
+        }
+        self.write(element).unwrap();
     }
 }
