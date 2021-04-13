@@ -1,3 +1,7 @@
+// one day when I'm mature enough to switch to the unstable Rust…
+// extern crate alloc;
+// use alloc::raw_vec::RawVec;
+
 pub struct CircularBuffer<T> {
     capacity: usize,
     head: usize,
@@ -18,9 +22,14 @@ impl<T> CircularBuffer<T> {
         assert!(capacity < MAX_CAPACITY);
 
         let mut buffer = Vec::with_capacity(capacity);
-        for _ in 0..capacity {
-            buffer.push(None);
-        }
+
+        // unsafe {
+        //     buffer.set_len(capacity);
+        // }
+
+        // for _ in 0..capacity {
+        //     buffer.push(None);
+        // }
 
         Self {
             capacity,
