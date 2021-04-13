@@ -23,13 +23,14 @@ impl<T> CircularBuffer<T> {
 
         let mut buffer = Vec::with_capacity(capacity);
 
+        // some day later…
         // unsafe {
         //     buffer.set_len(capacity);
         // }
 
-        // for _ in 0..capacity {
-        //     buffer.push(None);
-        // }
+        for _ in 0..capacity {
+            buffer.push(None);
+        }
 
         Self {
             capacity,
